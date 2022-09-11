@@ -1,0 +1,68 @@
+import sys
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtSvg import QSvgWidget
+
+svg_str = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="300" viewBox="0 0 300 300" id="smile" version="1.1">
+    <path
+        style="fill:#ffaaaa"
+        d="M 150,0 A 150,150 0 0 0 0,150 150,150 0 0 0 150,300 150,150 0 0 0 
+            300,150 150,150 0 0 0 150,0 Z M 72,65 A 21,29.5 0 0 1 93,94.33 
+            21,29.5 0 0 1 72,124 21,29.5 0 0 1 51,94.33 21,29.5 0 0 1 72,65 Z 
+            m 156,0 a 21,29.5 0 0 1 21,29.5 21,29.5 0 0 1 -21,29.5 21,29.5 0 0 1 
+            -21,-29.5 21,29.5 0 0 1 21,-29.5 z m -158.75,89.5 161.5,0 c 0,44.67 
+            -36.125,80.75 -80.75,80.75 -44.67,0 -80.75,-36.125 -80.75,-80.75 z"
+    />
+</svg>
+"""
+# ==========================================
+with open('smile.svg', 'w') as f:
+    f.write(svg_str)
+# ==========================================
+app = QApplication(sys.argv)
+svgWidget = QSvgWidget('smile.svg')
+svgWidget.setGeometry(100,100,300,300)
+svgWidget.show()
+sys.exit(app.exec_())
+
+My problem is that I couldn't find a way around the need to save the file in order to instantiate a QSvgWidget object from the string itself. I don't want to save files indiscriminately and I couldn't find a way to load xml information directly to a QSvgWidget object...
+
+I found a solution closest to my desires, and it looks like this:
+
+import sys
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtSvg import QSvgWidget, QSvgRenderer
+from PyQt5.QtCore import QXmlStreamReader
+from PyQt5.QtGui import QPainter
+
+svg_str = """<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg width="300" height="300" viewBox="0 0 300 300" id="smile" version="1.1">
+    <path
+        style="fill:#ffaaaa"
+        d="M 150,0 A 150,150 0 0 0 0,150 150,150 0 0 0 150,300 150,150 0 0 0 
+            300,150 150,150 0 0 0 150,0 Z M 72,65 A 21,29.5 0 0 1 93,94.33 
+            21,29.5 0 0 1 72,124 21,29.5 0 0 1 51,94.33 21,29.5 0 0 1 72,65 Z 
+            m 156,0 a 21,29.5 0 0 1 21,29.5 21,29.5 0 0 1 -21,29.5 21,29.5 0 0 1 
+            -21,-29.5 21,29.5 0 0 1 21,-29.5 z m -158.75,89.5 161.5,0 c 0,44.67 
+            -36.125,80.75 -80.75,80.75 -44.67,0 -80.75,-36.125 -80.75,-80.75 z"
+    />
+</svg>
+"""
+# ==========================================
+class QSvgWidget_from_string(QSvgWidget):
+    def __init__(self, strSVG):
+        super().__init__()
+        self.strSVG = strSVG
+    def paintEvent(self, event):
+        qp = QPainter()
+        qp.begin(self)
+        svg_render = QSvgRenderer(QXmlStreamReader(self.strSVG))
+        qp.restore()
+        svg_render.render(qp)
+        qp.end()
+# ==========================================
+app = QApplication(sys.argv)
+svgWidget = QSvgWidget_from_string(svg_str)
+svgWidget.setGeometry(100,100,300,300)
+svgWidget.show()
+sys.exit(app.exec_())
